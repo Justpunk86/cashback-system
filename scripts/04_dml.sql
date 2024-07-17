@@ -18,3 +18,4 @@ insert into cb.dic_mcc (mcc_id, mcc_code, mcc_description) values (dic_seq.nextv
 
 commit;
 
+-- наполняем спра-к Merchants

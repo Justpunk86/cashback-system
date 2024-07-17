@@ -56,7 +56,7 @@ end;
 create or replace package cb.cashback
 is
    -- функция возвращающая запись для вставки в таблицу обмена
-  function get_value_from_str (str in varchar2) return cb.exchange%rowtype;
+  function get_value_from_str (str in varchar2) return cb.exchange_table%rowtype;
   
   -- читает файл и загружает в таблицу обмена
   procedure load_exchange_table (file_name in varchar2);
@@ -65,14 +65,14 @@ end cashback;
 
 create or replace package body cb.cashback
 is
-  function get_value_from_str (str in varchar2) return cb.exchange%rowtype
+  function get_value_from_str (str in varchar2) return cb.exchange_table%rowtype
   is
     dmtr   varchar2(1) := ';';
     v_part   varchar2(200);
     curr_pos number := 1;
     text_l   number := length(str);
     part_l    number;
-    rec cb.exchange%rowtype; 
+    rec cb.exchange_table%rowtype; 
     cnt_field number := 0;
   begin
   -- if str is not null-- and length(str) > 2
@@ -107,7 +107,7 @@ is
    l_file utl_file.file_type;
    l_line varchar2(1000);
    l_eof  boolean;
-   rec_exch cb.exchange%rowtype;
+   rec_exch cb.exchange_table%rowtype;
   begin
     l_file := utl_file.fopen('FILES',file_name,'R');
 
@@ -118,16 +118,27 @@ is
       if l_line is not null
       then       
           rec_exch := cashback.get_value_from_str(l_line);
-          insert into cb.exchange values rec_exch;
+          insert into cb.exchange_table values rec_exch;
       end if;
 
     end loop;
     utl_file.fclose(l_file);
     commit;
   end load_exchange_table;
+  
+  /*procedure create_result_file()
+  is
+  l_file utl_file.file_type;
+  new_fname varchar2(255);
+  begin
+    new_fname := 
+    l_file = utl_file.
+  
+  end make_result_load;*/
 begin
   null;
 end;
+
 
 
 
