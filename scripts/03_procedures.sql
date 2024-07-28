@@ -1,12 +1,4 @@
-/*create or replace procedure create_file () 
-is
-
-begin
-  
-end create_file;
-*/
-
-create or replace package cb.fileIO
+create or replace package fileIO
 is
   -- выводит доступные директории
   procedure gen_utl_file_dir_entries;
@@ -16,10 +8,14 @@ is
     file_in in utl_file.file_type
    ,line_out out varchar2
    ,eof_out  out boolean);
+   
+  -- создание файла
+--  procedure create_file (
   
 end fileIO;
+/
 
-create or replace package body cb.fileIO
+create or replace package body fileIO
 is
 -- процедура выводящая доступные директориии
   procedure gen_utl_file_dir_entries
@@ -31,7 +27,7 @@ is
       end loop;
   end gen_utl_file_dir_entries;
 
--- процедура для чтения файла
+-- процедура для чтения строки из файла
   procedure get_nextline (
     file_in in utl_file.file_type
    ,line_out out varchar2
@@ -51,95 +47,20 @@ is
 begin
   null;
 end;
-
--- пакет процедур для системы cashback
-create or replace package cb.cashback
-is
-   -- функция возвращающая запись для вставки в таблицу обмена
-  function get_value_from_str (str in varchar2) return cb.exchange_table%rowtype;
-  
-  -- читает файл и загружает в таблицу обмена
-  procedure load_exchange_table (file_name in varchar2);
-end cashback;
 /
 
-create or replace package body cb.cashback
+create or replace procedure raise_sqlcode (sql_code IN pls_integer)
 is
-  function get_value_from_str (str in varchar2) return cb.exchange_table%rowtype
-  is
-    dmtr   varchar2(1) := ';';
-    v_part   varchar2(200);
-    curr_pos number := 1;
-    text_l   number := length(str);
-    part_l    number;
-    rec cb.exchange_table%rowtype; 
-    cnt_field number := 0;
-  begin
-  -- if str is not null-- and length(str) > 2
-  -- then
-      loop
-          v_part := regexp_substr(str,'([A-z0-9]+\s*)+',curr_pos);
-          --dbms_output.put_line(v_part);
-          cnt_field := cnt_field + 1;
-          part_l := length(coalesce(v_part,' '));
-          curr_pos := instr(str,dmtr,curr_pos + part_l);
-          case cnt_field
-            when 1 then rec.field1 := v_part;
-            when 2 then rec.field2 := v_part;
-            when 3 then rec.field3 := v_part;
-            when 4 then rec.field4 := v_part;
-            when 5 then rec.field5 := v_part;
-            when 6 then rec.field6 := v_part;
-            when 7 then rec.field7 := v_part;
-            when 8 then rec.field8 := v_part;
---          else null;
-          end case;                      
-          exit when curr_pos = 0 or curr_pos = text_l;
-        end loop;
-        rec.code_error := null;
-        rec.text_error := null;    
-   -- end if;
-    return rec;
-  end get_value_from_str;
-
-  procedure load_exchange_table (file_name in varchar2)
-  is
-   l_file utl_file.file_type;
-   l_line varchar2(1000);
-   l_eof  boolean;
-   rec_exch cb.exchange_table%rowtype;
-  begin
-    l_file := utl_file.fopen('FILES',file_name,'R');
-
-    loop
-      fileIO.get_nextline(l_file, l_line, l_eof);
-
-      exit when l_eof;
-      if l_line is not null
-      then       
-          rec_exch := cashback.get_value_from_str(l_line);
-          insert into cb.exchange_table values rec_exch;
-      end if;
-
-    end loop;
-    utl_file.fclose(l_file);
-    commit;
-  end load_exchange_table;
-  
-  /*procedure create_result_file()
-  is
-  l_file utl_file.file_type;
-  new_fname varchar2(255);
-  begin
-    new_fname := 
-    l_file = utl_file.
-  
-  end make_result_load;*/
+  v_errcode  dic_errors.code_error%type;
+  v_errtxt  dic_errors.text_error%type;
 begin
-  null;
-end;
-
-
-
+  select t.code_error, t.text_error
+  into v_errcode, v_errtxt
+  from dic_errors t
+  where t.sql_code_val = sql_code;
+  
+  RAISE_APPLICATION_ERROR (v_errcode, v_errtxt);
+end raise_sqlcode;
+/
 
 

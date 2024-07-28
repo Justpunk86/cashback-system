@@ -67,13 +67,24 @@ begin
     end loop;
 end;*/
 
-truncate table cb.exchange;
+/*
+insert into dic_mcc (mcc_id, mcc_code, mcc_description) values (dic_seq.nextval, 3991,'Экосистема Сбера');
+insert into dic_mcc (mcc_id, mcc_code, mcc_description) values (dic_seq.nextval, 3990,'Экосистема Яндекса');
+insert into dic_mcc (mcc_id, mcc_code, mcc_description) values (dic_seq.nextval, 5441,'Кондитерские');
+insert into dic_mcc (mcc_id, mcc_code, mcc_description) values (dic_seq.nextval, 5451,'Продажа молочных продуктов в розницу');
+insert into dic_mcc (mcc_id, mcc_code, mcc_description) values (dic_seq.nextval, 5462,'Булочные');
+insert into dic_mcc (mcc_id, mcc_code, mcc_description) values (dic_seq.nextval, 5311,'Универмаги');
+insert into dic_mcc (mcc_id, mcc_code, mcc_description) values (dic_seq.nextval, 5331,'Универсальные магазины');
+insert into dic_mcc (mcc_id, mcc_code, mcc_description) values (dic_seq.nextval, 5399,'Различные товары общего назначения');
+insert into dic_mcc (mcc_id, mcc_code, mcc_description) values (dic_seq.nextval, 5262,'Маркетплейсы');
+insert into dic_mcc (mcc_id, mcc_code, mcc_description) values (dic_seq.nextval, 5099,'Товары длительного пользования – нигде более не классифицированные');
+insert into dic_mcc (mcc_id, mcc_code, mcc_description) values (dic_seq.nextval, 5111,'Канцелярия, офисные сопутствующие товары, бумага для печатания и письма');
 
-declare
--- v_temp varchar2(100);
- v_temp cb.exchange%rowtype;
-begin
-  cashback.load_exchange_table('transactions.csv');
+insert into dic_mcc (mcc_id, mcc_code, mcc_description) values (dic_seq.nextval, 5131,'Штучные товары, галантерея и другие текстильные товары');*/
+
+--insert into dic_mcc (mcc_id, mcc_code, mcc_description) values (dic_seq.nextval, 5139,'Спец-обувь');
+--insert into dic_mcc (mcc_id, mcc_code, mcc_description) values (dic_seq.nextval, 5422,'Продажа свежего и мороженого мяса');
+
  /* v_temp := cashback.get_value_from_str ('T;2;1;;;;;;');
   dbms_output.put_line(v_temp.field1);
   dbms_output.put_line(v_temp.field2);
@@ -85,8 +96,37 @@ begin
   dbms_output.put_line(v_temp.field8);
   dbms_output.put_line(v_temp.code_error);
   dbms_output.put_line(v_temp.text_error);*/
+
+truncate table exchange_table;
+truncate table validated_files;
+
+
+declare
+-- v_temp varchar2(100);
+-- v_temp exchange_table%rowtype;
+begin
+ -- cashback.load_exchange_table('transactions.csv');
+  cashback.upload_to_tables;
 end;
 /
 
-select * from cb.exchange;
+
+select * from dic_client_types;
+select * from dic_errors;
+select * from dic_mcc;
+select * from dic_merchant_programs;
+select * from dic_params;
+select * from dic_transaction_types;
+
+select * from cards;
+select * from clients;
+select * from exchange_table;
+select * from individual_persons;
+select * from merchants;
+select * from merchants_programs;
+select * from purchases;
+select * from returns;
+select * from transactions;
+select * from validated_files;
+
 

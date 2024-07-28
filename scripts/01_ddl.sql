@@ -1,7 +1,8 @@
 -- created by Sergey Ermachkov
 
 -- create directory for download files
-create or replace directory files as 'C:\cashback_files\';
+create or replace directory in_files as 'C:\cashback_files\in\';
+create or replace directory out_files as 'C:\cashback_files\out\';
 
 -- sequences
 create sequence dic_seq
@@ -40,7 +41,25 @@ increment by 1
 nocache
 nocycle;
 
-create sequence files_seq
+create sequence new_file_seq
+start with 1
+increment by 1
+nocache
+nocycle;
+
+create sequence in_file_seq
+start with 1
+increment by 1
+nocache
+nocycle;
+
+create sequence verifn_seq
+start with 1
+increment by 1
+nocache
+nocycle;
+
+create sequence rows_seq
 start with 1
 increment by 1
 nocache
