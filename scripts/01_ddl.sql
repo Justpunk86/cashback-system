@@ -29,6 +29,12 @@ increment by 1
 nocache
 nocycle;
 
+create sequence operations_seq
+start with 1
+increment by 1
+nocache
+nocycle;
+
 create sequence merchants_seq
 start with 1
 increment by 1
@@ -60,6 +66,12 @@ nocache
 nocycle;
 
 create sequence rows_seq
+start with 1
+increment by 1
+nocache
+nocycle;
+
+create sequence registries_seq
 start with 1
 increment by 1
 nocache
@@ -788,3 +800,99 @@ alter table DIC_PARAMS
   pctfree 10
   initrans 2
   maxtrans 255;
+  
+-- Create table
+create table REGISTRIES
+(
+  reg_id        NUMBER not null,
+  month         NUMBER not null,
+  year          NUMBER not null,
+  reg_file_name VARCHAR2(255) not null
+)
+tablespace USERS
+  pctfree 10
+  initrans 1
+  maxtrans 255
+  storage
+  (
+    initial 64K
+    minextents 1
+    maxextents unlimited
+  );
+-- Add comments to the table 
+comment on table REGISTRIES
+  is 'Данные о сформированных реестрах';
+-- Add comments to the columns 
+comment on column REGISTRIES.month
+  is 'Месяц за который сформирован реестр';
+comment on column REGISTRIES.year
+  is 'Год за который сформирован реестр';
+comment on column REGISTRIES.reg_file_name
+  is 'Имя файла';
+-- Create/Recreate primary, unique and foreign key constraints 
+alter table REGISTRIES
+  add constraint REGISTRIES_PK primary key (REG_ID)
+  using index 
+  tablespace USERS
+  pctfree 10
+  initrans 2
+  maxtrans 255;
+alter table REGISTRIES
+  add constraint REGISTRIES_UK unique (MONTH, YEAR)
+  using index 
+  tablespace USERS
+  pctfree 10
+  initrans 2
+  maxtrans 255;
+  
+-- Create table
+create table MCC_MERCHANT_EXCLUDED
+(
+  excluding_id NUMBER not null,
+  mcc_id       NUMBER not null,
+  merchant_id  NUMBER not null
+)
+tablespace USERS
+  pctfree 10
+  initrans 1
+  maxtrans 255
+  storage
+  (
+    initial 64K
+    minextents 1
+    maxextents unlimited
+  );
+-- Add comments to the table 
+comment on table MCC_MERCHANT_EXCLUDED
+  is 'Список исключений mcc и мерчантов';
+-- Add comments to the columns 
+comment on column MCC_MERCHANT_EXCLUDED.mcc_id
+  is 'Ид-р кода mcc';
+comment on column MCC_MERCHANT_EXCLUDED.merchant_id
+  is 'Ид-р мерчанта';
+-- Create/Recreate primary, unique and foreign key constraints 
+alter table MCC_MERCHANT_EXCLUDED
+  add constraint EXCLUDED_MCC_MERC_PK primary key (EXCLUDING_ID)
+  using index 
+  tablespace USERS
+  pctfree 10
+  initrans 2
+  maxtrans 255;
+alter table MCC_MERCHANT_EXCLUDED
+  add constraint EXCLUDED_MCC_MERC_UK unique (MCC_ID, MERCHANT_ID)
+  using index 
+  tablespace USERS
+  pctfree 10
+  initrans 2
+  maxtrans 255;
+alter table MCC_MERCHANT_EXCLUDED
+  add constraint EXCLUDED_MCC_FK foreign key (MCC_ID)
+  references DIC_MCC (MCC_ID);
+alter table MCC_MERCHANT_EXCLUDED
+  add constraint EXCLUDED_MERC_FK foreign key (MERCHANT_ID)
+  references MERCHANTS (MERCHANT_ID);
+  
+-- indexes
+create index purchases_card_idx on purchases(card_id);
+create index returns_purchase_idx on returns(purchase_id);
+create index cards_client_idx on cards(client_id);  
