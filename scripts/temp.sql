@@ -46,13 +46,13 @@ where p.param_name = 'reporting_date';
 
 
 truncate table exchange_table;
-truncate table validated_files;
 truncate table returns;
 truncate table purchases;
 truncate table registries;
 truncate table transactions;
+truncate table validated_files;
 
-
+/*
 begin
   cashback.download_from_file('transactions.csv');
 end;
@@ -63,15 +63,10 @@ begin
 end;
 /
 
-declare
-  v_fid number;
+*/
+
 begin
-  select min(vf.file_id)
-  into v_fid
-  from validated_files vf
-  where vf.validated_date is null;
-  
-  cashback.get_response_file(v_fid);
+  cashback.get_cashback_file(202407);
 end;
 /
 
@@ -81,14 +76,16 @@ end;
 /  
 
 begin
-  cashback.get_cashback_file(202407);
-end;
-/
-
-begin
   cashback.get_register;
 end;
 /
+
+select * from exchange_table;
+select * from purchases;
+select * from returns;
+select * from transactions;
+select * from validated_files;
+select * from registries;
 
 select * from dic_client_types;
 select * from dic_errors;
@@ -96,20 +93,10 @@ select * from dic_mcc;
 select * from dic_merchant_programs;
 select * from dic_params;
 select * from dic_transaction_types;
-
-select * from exchange_table;
 select * from cards;
 select * from clients;
 select * from individual_persons;
 select * from merchants;
 select * from merchants_programs;
-select * from purchases;
-select * from returns;
-select * from transactions;
-select * from validated_files;
-select * from registries;
-
-
-
 
 

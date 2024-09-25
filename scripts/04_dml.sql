@@ -204,58 +204,37 @@ commit;
 insert into clients (client_id, client_type_id)
 values (clients_seq.nextval, (select type_id from dic_client_types where type_name = 'Физическое лицо'));
 
+-- Документы
+insert into documents(doc_id, doc_type, doc_serial, doc_number,client_id)
+values (dic_seq.nextval, 'Passport', '0001', '000001',clients_seq.currval);
+
 -- данные Физические лица
-insert into individual_persons (person_id,
-                                first_name,
-                                last_name,
-                                middle_name,
-                                passport_sn,
-                                passport_num)
-values (clients_seq.currval,
-'Иван',
-'Иванов',
-'Иванович',
-'0001',
-'000001'
-);
+insert into individual_persons (person_id, first_name, last_name, middle_name)
+values (clients_seq.currval, 'Алексей', 'Алёшин', 'Алексеевич');
 
 -- данные Клиенты
 insert into clients (client_id, client_type_id)
 values (clients_seq.nextval, (select type_id from dic_client_types where type_name = 'Физическое лицо'));
 
--- данные Физические лица
-insert into individual_persons (person_id,
-                                first_name,
-                                last_name,
-                                middle_name,
-                                passport_sn,
-                                passport_num)
-values (clients_seq.currval,
-'Петр',
-'Петров',
-'Петрович',
-'0002',
-'000002'
-);
+
+insert into documents(doc_id, doc_type, doc_serial, doc_number,client_id)
+values (dic_seq.nextval, 'Passport', '0002', '000002',clients_seq.currval);
+
+
+insert into individual_persons (person_id, first_name, last_name, middle_name)
+values (clients_seq.currval, 'Петр', 'Петров', 'Петрович');
 
 -- данные Клиенты
 insert into clients (client_id, client_type_id)
 values (clients_seq.nextval, (select type_id from dic_client_types where type_name = 'Физическое лицо'));
 
--- данные Физические лица
-insert into individual_persons (person_id,
-                                first_name,
-                                last_name,
-                                middle_name,
-                                passport_sn,
-                                passport_num)
-values (clients_seq.currval,
-'Алексей',
-'Алёшин',
-'Алексеевич',
-'0003',
-'000003'
-);
+
+insert into documents(doc_id, doc_type, doc_serial, doc_number,client_id)
+values (dic_seq.nextval, 'Passport', '0003', '000003',clients_seq.currval);
+
+
+insert into individual_persons (person_id, first_name, last_name, middle_name)
+values (clients_seq.currval, 'Алексей', 'Алёшин', 'Алексеевич');
 
 
 -- данные Карты клиентов

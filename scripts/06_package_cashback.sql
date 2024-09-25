@@ -239,19 +239,27 @@ is
     dmtr        varchar2(1) := ';';
     v_part      varchar2(200);
     curr_pos    number := 1;
-    text_l      number := length(str);
-    part_l      number;
-    rec         exchange_table%rowtype; 
+    rec         exchange_table%rowtype;
     cnt_field   number := 0;
+    v_dmtr_pos  number := 1;
+    v_part_lenth number;
+
   begin
-  -- if str is not null-- and length(str) > 2
-  -- then
+
       loop
-          v_part := regexp_substr(str,'([A-z0-9]+\s*)+',curr_pos);
-          --dbms_output.put_line(v_part);
+      
+          v_dmtr_pos := coalesce(instr(str,dmtr,curr_pos),0);
+
+        if v_dmtr_pos = 0
+        then
+          v_part := substr(str,curr_pos);   
+        else
+          v_part_lenth := v_dmtr_pos - curr_pos;
+          v_part := substr(str,curr_pos,v_part_lenth);          
+        end if;
+
           cnt_field := cnt_field + 1;
-          part_l := length(coalesce(v_part,' '));
-          curr_pos := instr(str,dmtr,curr_pos + part_l);
+
           case cnt_field
             when 1 then rec.field1 := v_part;
             when 2 then rec.field2 := v_part;
@@ -261,17 +269,20 @@ is
             when 6 then rec.field6 := v_part;
             when 7 then rec.field7 := v_part;
             when 8 then rec.field8 := v_part;
---          else null;
-          end case;            
-          rec.row_id := rows_seq.nextval;  
+          else null;
+          end case;
+          
+          rec.row_id := rows_seq.nextval;
           rec.file_id := null;
           rec.code_error := null;
-          rec.text_error := null;         
+          rec.text_error := null;
           
-          exit when curr_pos = 0 or curr_pos = text_l;
+          curr_pos := v_dmtr_pos + 1;
+          
+          exit when v_dmtr_pos = 0;
+
       end loop;
-           
-   -- end if;
+
     return rec;
   end get_value_from_str;
 
@@ -286,9 +297,11 @@ is
     v_cashback      number;
     v_high_rate     dic_params.param_value%type;
     v_standart_rate dic_params.param_value%type;
+    v_qty_opr       dic_params.param_value%type;
     v_excluded      mcc_merchant_excluded.excluding_id%type;
     v_mcc_high      dic_mcc.with_high_rate%type;
     v_merch_high    merchants.with_high_rate%type;
+
   begin
   
     select d.param_value
@@ -300,6 +313,11 @@ is
     into v_standart_rate
     from dic_params d
     where upper(d.param_name) = upper('standart_rate');
+    
+    select d.param_value
+    into v_qty_opr
+    from dic_params d
+    where upper(d.param_name) = upper('min_qty_operations');
     
     select nvl(s.excluding_id, s.val_null)
     into v_excluded
@@ -320,26 +338,32 @@ is
     from merchants m
     where m.merchant_id = in_merchant_id;
   
-    if in_opr_cnt < 10
+    -- кол-во операций должно быть >= 10
+    if in_opr_cnt < v_qty_opr
     then
       v_cashback := 0;
       return v_cashback;
     end if;
                 
-     if v_excluded is not null
-     then
+    -- если mcc и merchants в таблице исключений,
+    -- то кешбэк 0
+    if v_excluded is not null
+    then
       v_cashback := 0;
-     elsif v_excluded is null and v_merch_high = 1
-     then
+    -- есть ли повышенная ставка у мерчанта ?
+    elsif v_excluded is null and v_merch_high = 1 
+    then
       v_cashback := in_amount * v_high_rate;
-     elsif v_excluded is null and v_mcc_high = 1
-     then
+    -- есть ли повышенная ставка у mcc ? 
+    elsif v_excluded is null and v_mcc_high = 1
+    then
       v_cashback := in_amount * v_high_rate;
-     else
+    -- стандартная ставка
+    else
       v_cashback := in_amount * v_standart_rate;
-     end if;
-     
-     return v_cashback;
+    end if;
+           
+    return v_cashback;
   
   end calc_cashback;
 
@@ -347,63 +371,103 @@ is
   -- читает файл и загружает в таблицу обмена
   procedure download_from_file (file_name in varchar2)
   is
-   v_file     utl_file.file_type;
-   v_line     varchar2(1000);
-   v_eof      boolean;
-   
-   v_file_id  number;
-   rec_exch   exchange_table%rowtype;
+    type exch_tab is table of exchange_table%rowtype;
+    v_data_list exch_tab := exch_tab();
+    
+    v_file      utl_file.file_type;
+    v_line      varchar2(1000);
+    v_eof       boolean;
+       
+    v_file_id  number;
+    rec_exch   exchange_table%rowtype;
+       
+    v_cnt_p    number;
+    v_cnt_r    number;
+    
+    v_file_ident exchange_table.field2%type;
   begin
     v_file := utl_file.fopen('IN_FILES',file_name,'R');
-
-     -- чтение первой строки - заголовка файла
-     fileIO.get_nextline(v_file, v_line, v_eof);
-     rec_exch := cashback.get_value_from_str(v_line);
-     
-     -- запись данных о загружаемом файле
-     if not v_eof and rec_exch.field1 = 'H'
-     then
-        -- вставка в таблицу с проверенными файлами
-        -- без данных о проверке, только о загрузке
-        insert into VALIDATED_FILES (file_id,
-                                    merchant_file_id,
-                                    result_file,
-                                    VALIDATED_date,
-                                    result_file_name,
-                                    download_date)
-        values(in_file_seq.nextval,
-               rec_exch.field2,
-               null,
-               null,
-               null,
-               sysdate)
-        returning file_id into v_file_id;
-        
-        -- добавляем ссылку на ид-р файла для построения отчёта
-        rec_exch.file_id := v_file_id;
-        -- вставка в таблицу обмена
-        insert into exchange_table values rec_exch;
-        
-        commit;  
-      else
-        --В файле отсутствует заголовок
-        raise_sqlcode (-20000);
-      end if;
+    
+    v_cnt_p := 0;
+    v_cnt_r := 0;
 
     loop
-     fileIO.get_nextline(v_file, v_line, v_eof);
+      -- проверка на достижение конца файла
+      exit when v_eof;
+             
+      -- чтение следующей строки
+      fileIO.get_nextline(v_file, v_line, v_eof);
 
-     -- проверка на достижение конца файла
-     exit when v_eof;
-     -- вставка записей в таблицу обмена 
-     if v_line is not null
-     then       
-       rec_exch := cashback.get_value_from_str(v_line);
-       rec_exch.file_id := v_file_id;
-       insert into exchange_table values rec_exch;
-     end if;
+      if v_line is not null
+      then
+        rec_exch := cashback.get_value_from_str(v_line);
+        v_data_list.extend;
+        v_data_list(v_data_list.last) := rec_exch;
+      end if;
+              
+      if upper(rec_exch.field1) = upper('P')
+      then
+        v_cnt_p := v_cnt_p + 1;
+      elsif upper(rec_exch.field1) = upper('R')
+      then
+        v_cnt_r := v_cnt_r + 1;
+      end if;
 
     end loop;
+    
+    --dbms_output.put_line(v_data_list(v_data_list.first).field1);
+    
+    -- запись данных о загружаемом файле
+    if v_data_list(v_data_list.first).field1 = 'H'
+    then
+    
+      v_file_ident := v_data_list(v_data_list.first).field2;
+      -- вставка в таблицу с проверенными файлами
+      -- без данных о проверке, только о загрузке
+      insert into VALIDATED_FILES (file_id,
+                                  merchant_file_id,
+                                  result_file,
+                                  VALIDATED_date,
+                                  result_file_name,
+                                  download_date)
+      values(in_file_seq.nextval,
+             v_file_ident,
+             null,
+             null,
+             null,
+             sysdate)
+      returning file_id into v_file_id;
+      
+      for i in v_data_list.first..v_data_list.last
+      loop
+        v_data_list(i).file_id := v_file_id;
+      end loop;
+
+    else
+      --В файле отсутствует заголовок
+      cashback.raise_sqlcode (-20000);
+    end if;
+    
+    if v_data_list(v_data_list.last).field1 = 'T'
+    then
+      null;
+    else
+      --В файле отсутствует концевик
+      cashback.raise_sqlcode(-20000);
+    end if;
+    
+    if v_cnt_p = to_number(v_data_list(v_data_list.last).field2) 
+        and v_cnt_r = to_number(v_data_list(v_data_list.last).field3)
+    then
+      null;
+    else
+      --Кол-во записей в файле не соответствует данным в концевике
+      cashback.raise_sqlcode(-20000);
+    end if;
+        
+    -- вставка записей в таблицу обмена 
+    forall i in v_data_list.first..v_data_list.last
+      insert into exchange_table values v_data_list(i);
     
     utl_file.fclose(v_file);
     commit;
@@ -411,10 +475,10 @@ is
     exception
       --Повторное поступление файла
       when DUP_VAL_ON_INDEX then
-         raise_sqlcode (-20002);
+         cashback.raise_sqlcode (-20002);
       --Длина значения атрибута превышает лими
       when VALUE_ERROR then
-         raise_sqlcode (SQLCODE);
+         cashback.raise_sqlcode (SQLCODE);
 
   end download_from_file;
 
@@ -697,7 +761,12 @@ is
 
        end loop;
        
-     --commit;
+     
+     update VALIDATED_FILES vf
+      set vf.validated_date = sysdate
+      where vf.file_id = f_id.file_id;
+     
+     commit;
 
     end loop;
       
@@ -769,15 +838,15 @@ is
     
     open v_cur_cb for 
       select 
-        decode(et.CODE_ERROR, null, 'S','E')||';'||
-        et.FIELD2||';'||
-        et.FIELD3||';'||
-        decode(et.CODE_ERROR, null, cd_full.cash_back||';'||cd_full.total_cashback, et.CODE_ERROR||';'||et.TEXT_ERROR)||';' as cb_data       
+        decode(et.CODE_ERROR, null, 'S','E')||';'||et.FIELD2||';'||et.FIELD3||';'||
+        decode(et.CODE_ERROR, null, cd_full.cash_back||';'||cd_full.total_cashback, 
+                et.CODE_ERROR||';'||et.TEXT_ERROR) as cb_data       
       from exchange_table et
       left join (       
           select s.transaction_id
           , s.cash_back
           , s.sum_cashback
+          -- мин-й кешбэк 100 макс-й кешбэк 3000
           , case 
               when s.sum_cashback > 3000 then 3000
               when s.sum_cashback < 100 then 0
@@ -803,8 +872,7 @@ is
     -- Обновление имени нового файла
     update VALIDATED_FILES vf
     set vf.result_file = res_bfile,
-        vf.result_file_name = v_new_fname,
-        vf.validated_date = sysdate
+        vf.result_file_name = v_new_fname
     where vf.file_id = in_file_id;
     
     -- удаление данных по проверенным файлам
@@ -879,8 +947,7 @@ is
       select 
           'C'||';'||
           s.card_crypto_num||';'||
-          s.total_cashback||';'
-           as cb_data
+          s.total_cashback as cb_data
        from
       (select tot_cb.client_id
           , c.card_crypto_num
@@ -950,13 +1017,12 @@ is
       v_yyyy,
       v_new_fname);
   
-    dbms_output.put_line(v_start||', '||v_fin);
+    --dbms_output.put_line(v_start||', '||v_fin);
   
     open v_cur_cb for 
       select 
           s.card_crypto_num||';'||
-          s.total_cashback||';'
-           as cb_data
+          s.total_cashback as cb_data
        from
       (select tot_cb.client_id
           , c.card_crypto_num
@@ -985,27 +1051,33 @@ is
     
   exception
     when DUP_VAL_ON_INDEX then
-      raise_application_error (sqlcode, 'Реестр за указанный период сформирован ранее');
+      raise_application_error (-20002, 'Реестр за указанный период сформирован ранее');
     
   end get_register;
   
     
   procedure main_proc 
   is
-    v_fid number;
+    v_period number;
   begin
-  
+    -- вызов процедуры загрузки из файла
     cashback.download_from_file('transactions.csv');
-      
-    cashback.upload_to_tables;
-  
-    select min(vf.file_id)
-    into v_fid
-    from validated_files vf
-    where vf.validated_date is null;
     
-    cashback.get_response_file(v_fid);
-
+    -- вызов процедуры загрузки в таблицы модуля и валидации  
+    cashback.upload_to_tables;
+    
+    -- вызов процедуры формирования файла о проверке для файлов не прошедших
+    for i in (select vf.file_id from validated_files vf where vf.result_file_name is null)
+    loop
+          cashback.get_response_file(i.file_id);    
+    end loop;
+    
+    -- вычисляется предыдущий месяц для формирования файла с кешбэком
+    v_period := to_number(to_char(sysdate - interval '1' month,'yyyymm'));
+    
+    -- вызов процедуры формирования файла с кешбэком
+    cashback.get_cashback_file(v_period);
+    
   end main_proc;
   
 begin
